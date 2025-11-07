@@ -9,4 +9,9 @@ export class AppController {
   getHello(): string {
     return this.appService.getHello();
   }
+
+  @Get('sp')
+  getStaticPage(@Res() res: Response) {
+    res.sendFile(join(__dirname, '..', 'public', 'index.html'));
+  }
 }

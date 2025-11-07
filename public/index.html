@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>应用导航 - Iframe布局</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            background: #f5f5f5;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* 左侧导航栏 */
+        .sidebar {
+            width: 240px;
+            background: #001529;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #1f1f1f;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 0;
+        }
+
+        .nav-item {
+            padding: 12px 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-left: 3px solid transparent;
+            display: flex;
+            align-items: center;
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        .nav-item:hover {
+            background: #112240;
+            color: #fff;
+        }
+
+        .nav-item.active {
+            background: #1890ff;
+            border-left-color: #40a9ff;
+            color: #fff;
+        }
+
+        .nav-item-icon {
+            margin-right: 10px;
+            font-size: 16px;
+        }
+
+        /* 右侧内容区 */
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+        }
+
+        .content-header {
+            padding: 16px 24px;
+            background: #fff;
+            border-bottom: 1px solid #e8e8e8;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .content-title {
+            font-size: 16px;
+            font-weight: 500;
+            color: #262626;
+        }
+
+        .iframe-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .iframe-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+
+        .content-body {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+            background: #fff;
+        }
+
+        .content-body h2 {
+            margin-bottom: 16px;
+            color: #262626;
+            font-size: 20px;
+        }
+
+        .content-body p {
+            line-height: 1.8;
+            color: #595959;
+            margin-bottom: 12px;
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #999;
+            font-size: 14px;
+        }
+
+        /* 滚动条样式 */
+        .sidebar-nav::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar-nav::-webkit-scrollbar-track {
+            background: #001529;
+        }
+
+        .sidebar-nav::-webkit-scrollbar-thumb {
+            background: #434343;
+            border-radius: 3px;
+        }
+
+        .sidebar-nav::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 左侧导航栏 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                🚀 应用导航
+            </div>
+            <nav class="sidebar-nav" id="navList">
+                <!-- 导航项将通过JavaScript动态生成 -->
+            </nav>
+        </div>
+
+        <!-- 右侧内容区 -->
+        <div class="content">
+            <div class="content-header">
+                <div class="content-title" id="currentTitle">请选择应用</div>
+            </div>
+            <div class="iframe-container">
+                <div class="content-body" id="contentBody" style="display: none;"></div>
+                <div class="loading" id="loading" style="display: none;">加载中...</div>
+                <iframe id="contentFrame" src="" style="display: none;"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 导航配置 - 前三个是正常内容，最后一个是iframe
+        const navConfig = [
+            { 
+                title: '首页', 
+                content: '<h2>欢迎来到首页</h2><p>这是首页的正常内容区域。您可以在这里展示任何HTML内容。</p><p>前三个导航项都会显示这样的正常内容，而不是iframe。</p>', 
+                icon: '🏠' 
+            },
+            { 
+                title: '文档', 
+                content: '<h2>文档中心</h2><p>这里是文档页面的内容。</p><p>您可以展示文档列表、帮助信息等内容。</p><ul><li>使用说明</li><li>API文档</li><li>常见问题</li></ul>', 
+                icon: '📚' 
+            },
+            { 
+                title: '控制台', 
+                content: '<h2>控制台</h2><p>控制台页面内容。</p><p>这里可以展示系统状态、统计数据等信息。</p>', 
+                icon: '⚙️' 
+            },
+            { 
+                title: '外部应用', 
+                url: 'https://apaas.feishuapp.cn/ae/apps/v3/package_3bfc2e__c/pc/aadgxfygo6qfa', 
+                icon: '🔧',
+                isIframe: true 
+            },
+        ];
+
+        // 初始化导航
+        function initNav() {
+            const navList = document.getElementById('navList');
+            const contentFrame = document.getElementById('contentFrame');
+            const contentBody = document.getElementById('contentBody');
+            const currentTitle = document.getElementById('currentTitle');
+            const loading = document.getElementById('loading');
+
+            // 生成导航项
+            navConfig.forEach((item, index) => {
+                const navItem = document.createElement('div');
+                navItem.className = 'nav-item' + (index === 0 ? ' active' : '');
+                navItem.innerHTML = `
+                    <span class="nav-item-icon">${item.icon}</span>
+                    <span>${item.title}</span>
+                `;
+                navItem.addEventListener('click', () => {
+                    // 移除所有active状态
+                    document.querySelectorAll('.nav-item').forEach(el => {
+                        el.classList.remove('active');
+                    });
+                    // 添加当前active状态
+                    navItem.classList.add('active');
+                    // 更新标题
+                    currentTitle.textContent = item.title;
+                    
+                    // 判断是显示正常内容还是iframe
+                    if (item.isIframe && item.url) {
+                        // 显示iframe
+                        contentBody.style.display = 'none';
+                        loading.style.display = 'block';
+                        contentFrame.style.display = 'none';
+                        contentFrame.src = item.url;
+                    } else if (item.content) {
+                        // 显示正常内容
+                        contentFrame.style.display = 'none';
+                        loading.style.display = 'none';
+                        contentBody.innerHTML = item.content;
+                        contentBody.style.display = 'block';
+                    }
+                });
+                navList.appendChild(navItem);
+            });
+
+            // iframe加载完成事件
+            contentFrame.addEventListener('load', () => {
+                loading.style.display = 'none';
+                contentFrame.style.display = 'block';
+            });
+
+            // 默认加载第一项
+            if (navConfig.length > 0) {
+                const firstItem = navConfig[0];
+                currentTitle.textContent = firstItem.title;
+                if (firstItem.content) {
+                    contentBody.innerHTML = firstItem.content;
+                    contentBody.style.display = 'block';
+                }
+            }
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', initNav);
+    </script>
+</body>
+</html>
